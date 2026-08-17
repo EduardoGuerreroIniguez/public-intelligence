@@ -1,6 +1,6 @@
 # SPEC-001 — Project Foundation
 
-**Status:** Draft  
+**Status:** Accepted
 **Milestone:** 0 — Build the Harness
 
 ## Context
@@ -165,6 +165,9 @@ The goal is useful type safety without creating unnecessary friction.
 
 Use `pyproject.toml` as the primary project metadata and dependency configuration.
 
+Use uv for project and dependency management, and commit `uv.lock` so local
+development installs are reproducible. Use Hatchling as the build backend.
+
 Keep runtime dependencies minimal.
 
 Expected runtime dependencies should initially be limited to what the minimal API needs.
@@ -280,6 +283,10 @@ No live network services should be required.
 ## Acceptance criteria
 
 - [ ] `pyproject.toml` exists and defines project metadata.
+- [ ] `pyproject.toml` declares `requires-python = ">=3.13"`.
+- [ ] `.python-version` pins the current development interpreter to Python 3.13.
+- [ ] Hatchling is configured as the build backend.
+- [ ] `uv.lock` is committed and consistent with `pyproject.toml`.
 - [ ] The project uses a `src/` package layout.
 - [ ] `public_intelligence` can be imported.
 - [ ] A minimal FastAPI app exists.
@@ -297,6 +304,13 @@ No live network services should be required.
 - [ ] README documents local development commands.
 - [ ] project structure reflects the modular-monolith boundaries from ADR-001.
 - [ ] all documented quality checks pass.
+- [ ] `uv sync --frozen` succeeds.
+- [ ] `uv run python -c "import public_intelligence"` succeeds.
+- [ ] `uv run ruff format --check .` succeeds.
+- [ ] `uv run ruff check .` succeeds.
+- [ ] `uv run mypy src tests` succeeds.
+- [ ] `uv run pytest` succeeds without live network services.
+- [ ] `uv lock --check` succeeds.
 
 ## Suggested Codex implementation workflow
 
@@ -327,15 +341,11 @@ When complete, report:
 
 ## Open questions
 
-### OQ-1 — Packaging tool
+### OQ-1 — Packaging tool (Resolved)
 
-The spec requires `pyproject.toml` but intentionally does not prescribe Poetry, Hatch, PDM, uv, or another higher-level packaging workflow.
-
-Initial preference:
-
-Use the simplest approach that supports reproducible local development.
-
-Do not add tooling solely because it is fashionable.
+Use uv for project and dependency management, commit `uv.lock`, and use
+Hatchling as the build backend. This provides a small, reproducible workflow
+without introducing an additional application framework or task runner.
 
 ### OQ-2 — Docker
 
