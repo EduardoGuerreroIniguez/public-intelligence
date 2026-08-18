@@ -10,12 +10,13 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "fastapi>=0.141.1",
+    "httpx2>=2.9.0",
+    "pydantic>=2.13.4",
     "uvicorn>=0.52.3",
 ]
 
 [dependency-groups]
 dev = [
-    "httpx2>=2.9.0",
     "mypy>=2.3.0",
     "pytest>=9.1.1",
     "ruff>=0.16.3",
