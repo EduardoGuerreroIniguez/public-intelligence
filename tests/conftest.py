@@ -1,8 +1,12 @@
+import json
 import os
 from collections.abc import AsyncIterator, Iterator
+from io import BytesIO
 from pathlib import Path
+from typing import cast
 from urllib.parse import urlsplit, urlunsplit
 from uuid import uuid4
+from zipfile import ZIP_DEFLATED, ZipFile
 
 import psycopg
 import pytest
@@ -11,8 +15,9 @@ from yoyo import get_backend, read_migrations  # type: ignore[import-untyped]
 
 from public_intelligence.persistence import PostgresDatabase, RawEvidenceRepository
 
-PROJECT_ROOT = Path(__file__).parents[2]
+PROJECT_ROOT = Path(__file__).parents[1]
 MIGRATIONS_DIRECTORY = PROJECT_ROOT / "migrations"
+SERCOP_SAMPLE_DIRECTORY = PROJECT_ROOT / "docs" / "research" / "sercop" / "samples"
 DEFAULT_MAINTENANCE_URL = (
     "postgresql://public_intelligence:public_intelligence@localhost:5432/postgres"
 )
@@ -33,6 +38,47 @@ def _yoyo_url(database_url: str) -> str:
 @pytest.fixture
 def anyio_backend() -> str:
     return "asyncio"
+
+
+@pytest.fixture
+def sample_directory() -> Path:
+    return SERCOP_SAMPLE_DIRECTORY
+
+
+@pytest.fixture
+def search_body(sample_directory: Path) -> bytes:
+    return (sample_directory / "search-2015-agua-page-1.json").read_bytes()
+
+
+@pytest.fixture
+def record_bodies(sample_directory: Path) -> dict[str, bytes]:
+    return {
+        path.name: path.read_bytes()
+        for path in sorted(sample_directory.glob("record-*.json"))
+    }
+
+
+@pytest.fixture
+def bulk_source_packages() -> list[dict[str, object]]:
+    paths = [
+        SERCOP_SAMPLE_DIRECTORY
+        / "record-2015-ocds-5wno2w-CE-20150000092768-23237.json",
+        SERCOP_SAMPLE_DIRECTORY / "record-2026-ocds-5wno2w-CE-20260002969199-2455.json",
+    ]
+    return [cast(dict[str, object], json.loads(path.read_bytes())) for path in paths]
+
+
+@pytest.fixture
+def bulk_zip_body(bulk_source_packages: list[dict[str, object]]) -> bytes:
+    json_body = json.dumps(
+        bulk_source_packages,
+        ensure_ascii=False,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    target = BytesIO()
+    with ZipFile(target, "w", compression=ZIP_DEFLATED) as archive:
+        archive.writestr("sercop-bulk.json", json_body)
+    return target.getvalue()
 
 
 @pytest.fixture(scope="session")

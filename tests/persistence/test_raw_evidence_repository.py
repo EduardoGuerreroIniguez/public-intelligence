@@ -169,3 +169,62 @@ async def test_duplicate_payload_observations_are_independent(
     assert first.payload == second.payload
     assert await repository.get(first.id) == first
     assert await repository.get(second.id) == second
+
+
+@pytest.mark.anyio
+async def test_save_many_uses_the_same_source_neutral_insert_semantics(
+    repository: RawEvidenceRepository,
+) -> None:
+    first = evidence_input(b'{"source":"first"}')
+    second = evidence_input(
+        b'{"source":"second"}',
+        source="another_source",
+        parameters={"partition": "bounded"},
+    )
+
+    stored = await repository.save_many((first, second))
+
+    assert len(stored) == 2
+    assert stored[0].source == "example_source"
+    assert stored[0].payload == first.payload
+    assert stored[1].source == "another_source"
+    assert stored[1].parameters == {"partition": "bounded"}
+    assert await repository.get(stored[0].id) == stored[0]
+    assert await repository.get(stored[1].id) == stored[1]
+
+
+@pytest.mark.anyio
+async def test_save_many_validates_every_payload_before_inserting(
+    repository: RawEvidenceRepository,
+    database: PostgresDatabase,
+) -> None:
+    invalid = replace(evidence_input(), payload_sha256="0" * 64)
+
+    with pytest.raises(RawEvidenceIntegrityError):
+        await repository.save_many((evidence_input(), invalid))
+
+    async with database.connection() as connection:
+        row = await (
+            await connection.execute("SELECT count(*) AS count FROM raw_evidence")
+        ).fetchone()
+    assert row == {"count": 0}
+
+
+@pytest.mark.anyio
+async def test_save_many_rolls_back_the_group_on_database_failure(
+    repository: RawEvidenceRepository,
+    database: PostgresDatabase,
+) -> None:
+    invalid_parameters = replace(
+        evidence_input(b'{"source":"second"}'),
+        parameters={"not_json": object()},
+    )
+
+    with pytest.raises(TypeError, match="JSON serializable"):
+        await repository.save_many((evidence_input(), invalid_parameters))
+
+    async with database.connection() as connection:
+        row = await (
+            await connection.execute("SELECT count(*) AS count FROM raw_evidence")
+        ).fetchone()
+    assert row == {"count": 0}

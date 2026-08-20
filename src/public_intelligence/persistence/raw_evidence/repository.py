@@ -1,12 +1,14 @@
 """PostgreSQL repository for source-neutral raw evidence."""
 
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from datetime import UTC
 from hashlib import sha256
 from hmac import compare_digest
 from typing import Any
 from uuid import UUID, uuid4
 
+from psycopg import AsyncConnection
+from psycopg.rows import DictRow
 from psycopg.types.json import Jsonb
 
 from ..database import PostgresDatabase
@@ -85,32 +87,25 @@ class RawEvidenceRepository:
     async def save(self, evidence: RawEvidenceInput) -> RawEvidence:
         """Validate and store one independent raw evidence observation."""
         self._validate(evidence)
-        retrieved_at = evidence.retrieved_at.astimezone(UTC)
-        evidence_id = uuid4()
-        parameters: Mapping[str, object] = {
-            "id": evidence_id,
-            "source": evidence.source,
-            "mechanism": evidence.mechanism,
-            "source_key": evidence.source_key,
-            "endpoint": evidence.endpoint,
-            "parameters": Jsonb(dict(evidence.parameters)),
-            "retrieved_at": retrieved_at,
-            "http_status": evidence.http_status,
-            "content_type": evidence.content_type,
-            "payload_sha256": evidence.payload_sha256,
-            "payload_byte_size": evidence.payload_byte_size,
-            "payload": evidence.payload,
-            "etag": evidence.etag,
-            "last_modified": evidence.last_modified,
-        }
-
         async with self._database.connection() as connection:
-            cursor = await connection.execute(_INSERT, parameters)
-            row = await cursor.fetchone()
+            return await self._insert(connection, evidence)
 
-        if row is None:  # pragma: no cover - PostgreSQL RETURNING contract
-            raise RuntimeError("PostgreSQL did not return the inserted raw evidence")
-        return self._from_row(row)
+    async def save_many(
+        self,
+        evidence: Iterable[RawEvidenceInput],
+    ) -> tuple[RawEvidence, ...]:
+        """Atomically store one concrete group of raw evidence observations."""
+        inputs = tuple(evidence)
+        for item in inputs:
+            self._validate(item)
+        if not inputs:
+            return ()
+
+        stored: list[RawEvidence] = []
+        async with self._database.connection() as connection:
+            for item in inputs:
+                stored.append(await self._insert(connection, item))
+        return tuple(stored)
 
     async def get(self, evidence_id: UUID) -> RawEvidence | None:
         """Retrieve one observation by its internal identifier."""
@@ -140,6 +135,34 @@ class RawEvidenceRepository:
             or evidence.retrieved_at.utcoffset() is None
         ):
             raise ValueError("retrieved_at must be timezone-aware")
+
+    @classmethod
+    async def _insert(
+        cls,
+        connection: AsyncConnection[DictRow],
+        evidence: RawEvidenceInput,
+    ) -> RawEvidence:
+        parameters: Mapping[str, object] = {
+            "id": uuid4(),
+            "source": evidence.source,
+            "mechanism": evidence.mechanism,
+            "source_key": evidence.source_key,
+            "endpoint": evidence.endpoint,
+            "parameters": Jsonb(dict(evidence.parameters)),
+            "retrieved_at": evidence.retrieved_at.astimezone(UTC),
+            "http_status": evidence.http_status,
+            "content_type": evidence.content_type,
+            "payload_sha256": evidence.payload_sha256,
+            "payload_byte_size": evidence.payload_byte_size,
+            "payload": evidence.payload,
+            "etag": evidence.etag,
+            "last_modified": evidence.last_modified,
+        }
+        cursor = await connection.execute(_INSERT, parameters)
+        row = await cursor.fetchone()
+        if row is None:  # pragma: no cover - PostgreSQL RETURNING contract
+            raise RuntimeError("PostgreSQL did not return the inserted raw evidence")
+        return cls._from_row(row)
 
     @staticmethod
     def _from_row(row: Mapping[str, Any]) -> RawEvidence:

@@ -41,3 +41,54 @@ class SercopTransportError(SercopError):
         self.endpoint = endpoint
         self.reason = reason
         super().__init__(f"SERCOP transport failure for {endpoint}: {reason}")
+
+
+class SercopBulkError(SercopError):
+    """Base error for SERCOP bulk-partition failures."""
+
+
+class SercopBulkNotFoundError(SercopBulkError):
+    """The explicitly requested SERCOP bulk partition was not found."""
+
+    def __init__(self, *, endpoint: str, status_code: int) -> None:
+        self.endpoint = endpoint
+        self.status_code = status_code
+        super().__init__(f"SERCOP bulk partition not found at {endpoint}")
+
+
+class SercopBulkResponseError(SercopBulkError):
+    """SERCOP returned an unacceptable bulk HTTP response."""
+
+    def __init__(
+        self,
+        *,
+        endpoint: str,
+        reason: str,
+        status_code: int,
+        content_type: str | None = None,
+    ) -> None:
+        self.endpoint = endpoint
+        self.reason = reason
+        self.status_code = status_code
+        self.content_type = content_type
+        super().__init__(
+            f"Invalid SERCOP bulk response from {endpoint} "
+            f"with HTTP {status_code}: {reason}"
+        )
+
+
+class SercopBulkArtifactError(SercopBulkError):
+    """The downloaded bulk artifact does not match the observed ZIP shape."""
+
+
+class SercopBulkJsonError(SercopBulkArtifactError):
+    """The JSON member in a SERCOP bulk artifact is malformed."""
+
+
+class SercopBulkRecordError(SercopBulkError):
+    """One indexed release package in the bulk artifact is invalid."""
+
+    def __init__(self, *, index: int, reason: str) -> None:
+        self.index = index
+        self.reason = reason
+        super().__init__(f"Invalid SERCOP bulk source unit at index {index}: {reason}")

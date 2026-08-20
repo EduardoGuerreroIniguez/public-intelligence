@@ -69,6 +69,31 @@ To intentionally delete all local PostgreSQL data, run:
 docker compose down --volumes
 ```
 
+## Ingest one SERCOP bulk partition
+
+After PostgreSQL is running and migrations have been applied, ingest exactly
+one explicitly selected SERCOP JSON partition with:
+
+```bash
+DATABASE_URL=postgresql://public_intelligence:public_intelligence@localhost:5432/public_intelligence \
+  uv run python -m public_intelligence.pipelines.sercop_bulk \
+  --year 2026 \
+  --month 7 \
+  --type "Obra artística, científica o literaria"
+```
+
+Each invocation stores the exact downloaded ZIP response bytes in one
+`bulk_partition` raw-evidence row. Each top-level release package is stored in
+a separate `bulk_partition_release_package` row using deterministic canonical
+JSON derived from the ZIP member. Those package bytes are not the original HTTP
+response bytes and are not exact byte slices of the ZIP artifact.
+
+SPEC-005 buffers one explicitly requested artifact as a bounded proof of
+capability. The maximum size of real SERCOP partitions is unknown, so this
+workflow does not establish production-scale memory behavior. It intentionally
+does not schedule partitions, loop over history, retry, checkpoint, or
+deduplicate reruns.
+
 ## Quality checks
 
 Format the code:
