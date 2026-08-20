@@ -92,3 +92,46 @@ class SercopBulkRecordError(SercopBulkError):
         self.index = index
         self.reason = reason
         super().__init__(f"Invalid SERCOP bulk source unit at index {index}: {reason}")
+
+
+class SercopProcurementMappingError(SercopError):
+    """Base error for translating validated SERCOP data into procurement facts."""
+
+
+class SercopMissingProcurementIdentityError(SercopProcurementMappingError):
+    """A release package has no usable procurement identity."""
+
+    def __init__(self) -> None:
+        super().__init__("SERCOP release package has a blank procurement identity")
+
+
+class SercopAmbiguousProcurementIdentityError(SercopProcurementMappingError):
+    """A release package contains more than one procurement identity."""
+
+    def __init__(self, *, ocids: tuple[str, ...]) -> None:
+        self.ocids = ocids
+        super().__init__("SERCOP release package contains distinct OCIDs")
+
+
+class SercopUnsupportedReleaseStructureError(SercopProcurementMappingError):
+    """A release package cannot be mapped without an unsupported merge rule."""
+
+    def __init__(self, *, reason: str) -> None:
+        self.reason = reason
+        super().__init__(f"Unsupported SERCOP release structure: {reason}")
+
+
+class SercopInvalidMoneyError(SercopProcurementMappingError):
+    """A modeled SERCOP monetary value is unusable."""
+
+    def __init__(self, *, field: str) -> None:
+        self.field = field
+        super().__init__(f"Invalid SERCOP monetary value at {field}")
+
+
+class SercopInvalidDateError(SercopProcurementMappingError):
+    """A modeled SERCOP datetime is invalid or lacks a source timezone."""
+
+    def __init__(self, *, field: str) -> None:
+        self.field = field
+        super().__init__(f"Invalid SERCOP datetime at {field}")

@@ -10,6 +10,7 @@ from .bulk import (
 )
 from .client import SERCOP_BASE_URL, SercopClient
 from .errors import (
+    SercopAmbiguousProcurementIdentityError,
     SercopBulkArtifactError,
     SercopBulkError,
     SercopBulkJsonError,
@@ -17,11 +18,17 @@ from .errors import (
     SercopBulkRecordError,
     SercopBulkResponseError,
     SercopError,
+    SercopInvalidDateError,
+    SercopInvalidMoneyError,
+    SercopMissingProcurementIdentityError,
     SercopNotFoundError,
+    SercopProcurementMappingError,
     SercopResponseError,
     SercopTransportError,
+    SercopUnsupportedReleaseStructureError,
 )
 from .models import SercopRecordPackage, SercopSearchPage, SercopSearchSummary
+from .procurement_mapper import map_procurement_package
 from .provenance import SercopProvenance, SercopResult
 
 __all__ = [
@@ -39,7 +46,12 @@ __all__ = [
     "SercopBulkSourceUnit",
     "SercopClient",
     "SercopError",
+    "SercopAmbiguousProcurementIdentityError",
+    "SercopInvalidDateError",
+    "SercopInvalidMoneyError",
+    "SercopMissingProcurementIdentityError",
     "SercopNotFoundError",
+    "SercopProcurementMappingError",
     "SercopProvenance",
     "SercopRecordPackage",
     "SercopResponseError",
@@ -47,5 +59,7 @@ __all__ = [
     "SercopSearchPage",
     "SercopSearchSummary",
     "SercopTransportError",
+    "SercopUnsupportedReleaseStructureError",
+    "map_procurement_package",
     "parse_bulk_artifact",
 ]

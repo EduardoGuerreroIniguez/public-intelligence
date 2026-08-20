@@ -82,10 +82,10 @@ SercopNumber = StrictInt | StrictFloat
 
 
 class SercopMonetaryValue(_SercopModel):
-    """A source-level amount and its explicitly supplied currency."""
+    """A source-level amount and any explicitly supplied currency."""
 
     amount: SercopNumber
-    currency: StrictStr
+    currency: StrictStr | None = None
 
 
 class SercopTender(_SercopModel):
