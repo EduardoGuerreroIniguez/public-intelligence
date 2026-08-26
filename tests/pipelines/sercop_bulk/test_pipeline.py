@@ -31,12 +31,13 @@ async def test_partition_ingests_exact_artifact_and_derived_packages_atomically(
 ) -> None:
     client = _client(bulk_zip_body, bulk_response_headers)
     async with client:
-        summary = await ingest_partition(
+        result = await ingest_partition(
             PARTITION,
             client=client,
             repository=RawEvidenceRepository(database),
         )
 
+    summary = result.summary
     rows = await _rows(database)
     assert summary.partition == PARTITION
     assert summary.artifact_sha256 == sha256(bulk_zip_body).hexdigest()
@@ -44,6 +45,22 @@ async def test_partition_ingests_exact_artifact_and_derived_packages_atomically(
     assert summary.source_units_seen == 2
     assert summary.persisted == 2
     assert summary.failed == 0
+    assert len(result.package_evidence) == 2
+    assert all(
+        evidence.mechanism == "bulk_partition_release_package"
+        for evidence in result.package_evidence
+    )
+    assert [evidence.id for evidence in result.package_evidence] == [
+        row["id"]
+        for row in sorted(
+            (
+                row
+                for row in rows
+                if row["mechanism"] == "bulk_partition_release_package"
+            ),
+            key=lambda row: row["parameters"]["artifact"]["source_unit_index"],
+        )
+    ]
     assert len(rows) == 3
 
     artifact_rows = [row for row in rows if row["mechanism"] == "bulk_partition"]
@@ -132,8 +149,9 @@ async def test_duplicate_partition_rerun_persists_independent_observations(
 
     rows = await _rows(database)
     run_ids = {row["parameters"]["ingestion_run_id"] for row in rows}
-    assert first.artifact_sha256 == second.artifact_sha256
-    assert first.persisted == second.persisted == 2
+    assert first.summary.artifact_sha256 == second.summary.artifact_sha256
+    assert first.summary.persisted == second.summary.persisted == 2
+    assert first.ingestion_run_id != second.ingestion_run_id
     assert len(rows) == 6
     assert len(run_ids) == 2
     assert len({row["id"] for row in rows}) == 6

@@ -94,6 +94,25 @@ workflow does not establish production-scale memory behavior. It intentionally
 does not schedule partitions, loop over history, retry, checkpoint, or
 deduplicate reruns.
 
+## Process one SERCOP partition end to end
+
+With PostgreSQL running and all migrations already applied, preserve raw
+evidence and write normalized procurement snapshots for exactly one partition:
+
+```bash
+DATABASE_URL=postgresql://public_intelligence:public_intelligence@localhost:5432/public_intelligence \
+  uv run python -m public_intelligence.pipelines.procurement \
+  --year 2026 \
+  --month 7 \
+  --type "Obra artística, científica o literaria"
+```
+
+A successful command prints one JSON summary containing the ingestion-run ID,
+artifact hash and size, source-package count, mapped count, and normalized-save
+count. Processing is fail-fast: failures raise instead of returning a partial
+success summary. Raw artifact and package evidence remains stored when a later
+mapping or normalized-persistence step fails.
+
 ## Quality checks
 
 Format the code:

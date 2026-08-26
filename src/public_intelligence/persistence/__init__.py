@@ -1,6 +1,7 @@
 """Source-neutral PostgreSQL persistence boundary."""
 
 from .database import PostgresDatabase
+from .procurement import ProcurementRepository, StoredProcurement
 from .raw_evidence import (
     RawEvidence,
     RawEvidenceInput,
@@ -10,8 +11,10 @@ from .raw_evidence import (
 
 __all__ = [
     "PostgresDatabase",
+    "ProcurementRepository",
     "RawEvidence",
     "RawEvidenceInput",
     "RawEvidenceIntegrityError",
     "RawEvidenceRepository",
+    "StoredProcurement",
 ]

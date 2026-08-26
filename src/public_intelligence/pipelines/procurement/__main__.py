@@ -1,4 +1,4 @@
-"""Command-line entry point for one explicit SERCOP bulk partition."""
+"""Process one explicit SERCOP partition into normalized procurement facts."""
 
 import argparse
 import asyncio
@@ -7,10 +7,14 @@ import os
 from collections.abc import Sequence
 
 from public_intelligence.connectors.sercop import SercopBulkClient, SercopBulkPartition
-from public_intelligence.persistence import PostgresDatabase, RawEvidenceRepository
+from public_intelligence.persistence import (
+    PostgresDatabase,
+    ProcurementRepository,
+    RawEvidenceRepository,
+)
 
-from .models import SercopBulkIngestionSummary
-from .pipeline import ingest_partition
+from .models import ProcurementProcessingSummary
+from .pipeline import process_partition
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -23,7 +27,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    """Validate CLI input, run one partition, and print its summary as JSON."""
+    """Run one complete partition and print its successful summary as JSON."""
     parser = build_parser()
     arguments = parser.parse_args(argv)
     database_url = os.environ.get("DATABASE_URL")
@@ -46,11 +50,13 @@ def main(argv: Sequence[str] | None = None) -> int:
                 "year": summary.partition.year,
                 "month": summary.partition.month,
                 "procurement_type": summary.partition.procurement_type,
+                "ingestion_run_id": str(summary.ingestion_run_id),
                 "artifact_sha256": summary.artifact_sha256,
                 "artifact_byte_size": summary.artifact_byte_size,
                 "source_units_seen": summary.source_units_seen,
-                "persisted": summary.persisted,
-                "failed": summary.failed,
+                "raw_packages_persisted": summary.raw_packages_persisted,
+                "mapped": summary.mapped,
+                "normalized_saved": summary.normalized_saved,
             },
             ensure_ascii=False,
             sort_keys=True,
@@ -62,15 +68,15 @@ def main(argv: Sequence[str] | None = None) -> int:
 async def _run(
     partition: SercopBulkPartition,
     database_url: str,
-) -> SercopBulkIngestionSummary:
+) -> ProcurementProcessingSummary:
     async with PostgresDatabase(database_url) as database:
         async with SercopBulkClient() as client:
-            result = await ingest_partition(
+            return await process_partition(
                 partition,
                 client=client,
-                repository=RawEvidenceRepository(database),
+                raw_repository=RawEvidenceRepository(database),
+                procurement_repository=ProcurementRepository(database),
             )
-            return result.summary
 
 
 if __name__ == "__main__":  # pragma: no cover - exercised through main()

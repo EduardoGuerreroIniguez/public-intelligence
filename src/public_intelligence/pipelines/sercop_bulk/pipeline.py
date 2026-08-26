@@ -10,7 +10,7 @@ from public_intelligence.connectors.sercop import (
 )
 from public_intelligence.persistence import RawEvidenceInput, RawEvidenceRepository
 
-from .models import SercopBulkIngestionSummary
+from .models import SercopBulkIngestionResult, SercopBulkIngestionSummary
 
 PACKAGE_MECHANISM = "bulk_partition_release_package"
 
@@ -20,19 +20,19 @@ async def ingest_partition(
     *,
     client: SercopBulkClient,
     repository: RawEvidenceRepository,
-) -> SercopBulkIngestionSummary:
+) -> SercopBulkIngestionResult:
     """Download, validate, and atomically persist one explicit partition."""
     artifact = await client.download(partition)
     source_units = parse_bulk_artifact(artifact)
     provenance = artifact.provenance
-    ingestion_run_id = str(uuid4())
+    ingestion_run_id = uuid4()
 
     artifact_parameters: dict[str, object] = {
         "type": "json",
         "year": partition.year,
         "month": partition.month,
         "method": partition.procurement_type,
-        "ingestion_run_id": ingestion_run_id,
+        "ingestion_run_id": str(ingestion_run_id),
     }
     if provenance.filename is not None:
         artifact_parameters["filename"] = provenance.filename
@@ -68,7 +68,7 @@ async def ingest_partition(
                     "year": partition.year,
                     "month": partition.month,
                     "method": partition.procurement_type,
-                    "ingestion_run_id": ingestion_run_id,
+                    "ingestion_run_id": str(ingestion_run_id),
                     "artifact": {
                         "sha256": provenance.artifact_sha256,
                         "byte_size": provenance.artifact_byte_size,
@@ -87,12 +87,16 @@ async def ingest_partition(
         )
 
     stored = await repository.save_many(evidence)
-    persisted_packages = len(stored) - 1
-    return SercopBulkIngestionSummary(
-        partition=partition,
-        artifact_sha256=provenance.artifact_sha256,
-        artifact_byte_size=provenance.artifact_byte_size,
-        source_units_seen=len(source_units),
-        persisted=persisted_packages,
-        failed=0,
+    package_evidence = stored[1:]
+    return SercopBulkIngestionResult(
+        summary=SercopBulkIngestionSummary(
+            partition=partition,
+            artifact_sha256=provenance.artifact_sha256,
+            artifact_byte_size=provenance.artifact_byte_size,
+            source_units_seen=len(source_units),
+            persisted=len(package_evidence),
+            failed=0,
+        ),
+        ingestion_run_id=ingestion_run_id,
+        package_evidence=package_evidence,
     )

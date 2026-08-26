@@ -125,7 +125,17 @@ async def database(test_database_url: str) -> AsyncIterator[PostgresDatabase]:
     await database.open()
     try:
         async with database.connection() as connection:
-            await connection.execute("TRUNCATE TABLE raw_evidence")
+            await connection.execute(
+                """
+                TRUNCATE TABLE
+                    award_suppliers,
+                    procurement_contracts,
+                    procurement_awards,
+                    procurement_suppliers,
+                    procurements,
+                    raw_evidence
+                """
+            )
         yield database
     finally:
         await database.close()
