@@ -1,7 +1,14 @@
 """Source-neutral PostgreSQL persistence boundary."""
 
 from .database import PostgresDatabase
-from .procurement import ProcurementRepository, StoredProcurement
+from .procurement import (
+    ProcurementQueries,
+    ProcurementRepository,
+    ProcurementSearch,
+    ProcurementSearchPage,
+    ProcurementSearchResult,
+    StoredProcurement,
+)
 from .raw_evidence import (
     RawEvidence,
     RawEvidenceInput,
@@ -11,7 +18,11 @@ from .raw_evidence import (
 
 __all__ = [
     "PostgresDatabase",
+    "ProcurementQueries",
     "ProcurementRepository",
+    "ProcurementSearch",
+    "ProcurementSearchPage",
+    "ProcurementSearchResult",
     "RawEvidence",
     "RawEvidenceInput",
     "RawEvidenceIntegrityError",
