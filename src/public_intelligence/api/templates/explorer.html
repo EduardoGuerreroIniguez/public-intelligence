@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Procurement Explorer · Public Intelligence{% endblock %}
+{% block content %}
+  <h1>Procurement Explorer</h1>
+  <p class="lede">Explore factual normalized public procurement records.</p>
+
+  <form method="get" action="{{ url_for('procurement_explorer') }}" class="filters">
+    <label>Buyer<input name="buyer" value="{{ form['buyer'] }}"></label>
+    <label>Supplier<input name="supplier" value="{{ form['supplier'] }}"></label>
+    <label>Status<input name="status" value="{{ form['status'] }}"></label>
+    <label>Currency<input name="currency" value="{{ form['currency'] }}"></label>
+    <label>Minimum value<input name="min_value" inputmode="decimal" value="{{ form['min_value'] }}"></label>
+    <label>Maximum value<input name="max_value" inputmode="decimal" value="{{ form['max_value'] }}"></label>
+    <label>Results per page<input name="limit" type="number" min="1" max="200" value="{{ form['limit'] or '50' }}"></label>
+    <button type="submit">Search</button>
+  </form>
+
+  {% if error %}
+    <p class="message error" role="alert">Invalid search: {{ error }}</p>
+  {% elif page %}
+    <p class="result-count">
+      {{ page.total }} total · showing {{ range_start }}–{{ range_end }}
+    </p>
+
+    {% if rows %}
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Source</th>
+              <th>External ID</th>
+              <th>Buyer</th>
+              <th>Procedure</th>
+              <th>Status</th>
+              <th>Value</th>
+              <th>Updated</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in rows %}
+              {% set item = row['item'] %}
+              <tr>
+                <td>{{ item.source }}</td>
+                <td><a href="{{ row['detail_url'] }}">{{ item.external_id }}</a></td>
+                <td>{{ item.buyer_name if item.buyer_name is not none else 'Not supplied' }}</td>
+                <td>{{ item.procedure_title if item.procedure_title is not none else 'Not supplied' }}</td>
+                <td>{{ item.procedure_status if item.procedure_status is not none else 'Not supplied' }}</td>
+                <td>{{ item.procedure_value | money }}</td>
+                <td><time>{{ item.updated_at | utc_datetime }}</time></td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% elif page.total > 0 %}
+      <p class="message">This result page is empty. Use Previous to return to available results.</p>
+    {% elif has_filters %}
+      <p class="message">No procurements match these filters.</p>
+    {% else %}
+      <p class="message">No normalized procurements are available yet. Run the procurement processing pipeline first.</p>
+    {% endif %}
+
+    <nav class="pagination" aria-label="Result pages">
+      {% if previous_url %}<a href="{{ previous_url }}">Previous</a>{% endif %}
+      {% if next_url %}<a href="{{ next_url }}">Next</a>{% endif %}
+    </nav>
+  {% endif %}
+{% endblock %}

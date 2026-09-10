@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% macro supplied(value) -%}
+  {{ value if value is not none else 'Not supplied' }}
+{%- endmacro %}
+{% block title %}Procurement Detail · Public Intelligence{% endblock %}
+{% block content %}
+  <p><a href="{{ url_for('procurement_explorer') }}">← Back to explorer</a></p>
+
+  {% if error %}
+    <h1>Procurement detail</h1>
+    <p class="message error" role="alert">{{ error }}</p>
+    {% if source is defined and source %}<p>Source: {{ source }}</p>{% endif %}
+    {% if external_id is defined and external_id %}<p>External ID: {{ external_id }}</p>{% endif %}
+  {% else %}
+    {% set record = stored.record %}
+    <h1>{{ record.source_reference.external_id }}</h1>
+
+    <section>
+      <h2>Identity</h2>
+      <dl>
+        <dt>Source</dt><dd>{{ record.source_reference.source }}</dd>
+        <dt>External ID</dt><dd>{{ record.source_reference.external_id }}</dd>
+        <dt>Evidence UUID</dt><dd>{{ supplied(record.source_reference.evidence_id) }}</dd>
+        <dt>Updated</dt><dd>{{ stored.updated_at | utc_datetime }}</dd>
+      </dl>
+    </section>
+
+    <section>
+      <h2>Buyer</h2>
+      {% if record.buyer is none %}
+        <p>Not supplied</p>
+      {% else %}
+        <dl>
+          <dt>External ID</dt><dd>{{ supplied(record.buyer.external_id) }}</dd>
+          <dt>Name</dt><dd>{{ supplied(record.buyer.name) }}</dd>
+        </dl>
+      {% endif %}
+    </section>
+
+    <section>
+      <h2>Procedure</h2>
+      {% if record.procedure is none %}
+        <p>Not supplied</p>
+      {% else %}
+        <dl>
+          <dt>External ID</dt><dd>{{ record.procedure.external_id }}</dd>
+          <dt>Title</dt><dd>{{ supplied(record.procedure.title) }}</dd>
+          <dt>Description</dt><dd>{{ supplied(record.procedure.description) }}</dd>
+          <dt>Status</dt><dd>{{ supplied(record.procedure.status) }}</dd>
+          <dt>Method</dt><dd>{{ supplied(record.procedure.method) }}</dd>
+          <dt>Method details</dt><dd>{{ supplied(record.procedure.method_details) }}</dd>
+          <dt>Category</dt><dd>{{ supplied(record.procedure.category) }}</dd>
+          <dt>Value</dt><dd>{{ record.procedure.value | money }}</dd>
+        </dl>
+      {% endif %}
+    </section>
+
+    <section>
+      <h2>Procurement suppliers</h2>
+      {% if record.suppliers is none %}
+        <p>Not supplied</p>
+      {% elif not record.suppliers %}
+        <p>Supplied as an empty collection</p>
+      {% else %}
+        <ul>
+          {% for supplier in record.suppliers %}
+            <li>{{ supplied(supplier.name) }} · External ID: {{ supplied(supplier.external_id) }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    </section>
+
+    <section>
+      <h2>Awards</h2>
+      {% if record.awards is none %}
+        <p>Not supplied</p>
+      {% elif not record.awards %}
+        <p>Supplied as an empty collection</p>
+      {% else %}
+        {% for award in record.awards %}
+          <article>
+            <h3>{{ award.external_id }}</h3>
+            <dl>
+              <dt>Status</dt><dd>{{ supplied(award.status) }}</dd>
+              <dt>Date</dt><dd>{{ award.date | utc_datetime }}</dd>
+              <dt>Value</dt><dd>{{ award.value | money }}</dd>
+            </dl>
+            <h4>Award suppliers</h4>
+            {% if award.suppliers is none %}
+              <p>Not supplied</p>
+            {% elif not award.suppliers %}
+              <p>Supplied as an empty collection</p>
+            {% else %}
+              <ul>
+                {% for supplier in award.suppliers %}
+                  <li>{{ supplied(supplier.name) }} · External ID: {{ supplied(supplier.external_id) }}</li>
+                {% endfor %}
+              </ul>
+            {% endif %}
+          </article>
+        {% endfor %}
+      {% endif %}
+    </section>
+
+    <section>
+      <h2>Contracts</h2>
+      {% if record.contracts is none %}
+        <p>Not supplied</p>
+      {% elif not record.contracts %}
+        <p>Supplied as an empty collection</p>
+      {% else %}
+        {% for contract in record.contracts %}
+          <article>
+            <h3>{{ contract.external_id }}</h3>
+            <dl>
+              <dt>Award external ID</dt><dd>{{ supplied(contract.award_external_id) }}</dd>
+              <dt>Status</dt><dd>{{ supplied(contract.status) }}</dd>
+              <dt>Date signed</dt><dd>{{ contract.date_signed | utc_datetime }}</dd>
+              <dt>Value</dt><dd>{{ contract.value | money }}</dd>
+            </dl>
+          </article>
+        {% endfor %}
+      {% endif %}
+    </section>
+  {% endif %}
+{% endblock %}
