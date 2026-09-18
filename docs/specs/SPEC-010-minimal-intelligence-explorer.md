@@ -1,6 +1,6 @@
 # SPEC-010 — Minimal Intelligence Explorer
 
-**Status:** Accepted  
+**Status:** Implemented  
 **Milestone:** 2 — First Usable Product  
 **Type:** Implementation  
 **Depends on:** SPEC-001 through SPEC-009
