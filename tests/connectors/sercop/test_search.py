@@ -141,6 +141,8 @@ async def test_search_tolerates_documented_nulls_and_additive_fields(
         "title",
         "description",
         "budget",
+        "locality",
+        "region",
     ):
         first_summary[field] = None
     first_summary["futureSummaryField"] = "preserved"
@@ -165,6 +167,8 @@ async def test_search_tolerates_documented_nulls_and_additive_fields(
     assert summary.suppliers is None
     assert summary.model_extra == {"futureSummaryField": "preserved"}
     assert result.data.model_extra == {"futureEnvelopeField": {"value": True}}
+    assert summary.locality is None
+    assert summary.region is None
 
 
 @pytest.mark.anyio

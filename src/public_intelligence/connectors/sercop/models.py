@@ -20,8 +20,8 @@ class SercopSearchSummary(_SercopModel):
     month: StrictInt
     method: StrictStr | None
     internal_type: StrictStr | None
-    locality: StrictStr
-    region: StrictStr
+    locality: StrictStr | None
+    region: StrictStr | None
     suppliers: StrictStr | None
     buyer: StrictStr
     amount: StrictStr | None
